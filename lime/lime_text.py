@@ -20,12 +20,13 @@ from . import lime_base
 class TextDomainMapper(explanation.DomainMapper):
     """Maps feature ids to words or word-positions"""
 
-    def __init__(self, indexed_string):
+    def __init__(self, text1, indexed_string):
         """Initializer.
 
         Args:
             indexed_string: lime_text.IndexedString, original string
         """
+        self.text1 = text1
         self.indexed_string = indexed_string
 
     def map_exp_ids(self, exp, positions=False):
@@ -64,9 +65,12 @@ class TextDomainMapper(explanation.DomainMapper):
         """
         if not text:
             return u''
-        text = (self.indexed_string.raw_string()
+        text1 = (self.text1
                 .encode('utf-8', 'xmlcharrefreplace').decode('utf-8'))
-        text = re.sub(r'[<>&]', '|', text)
+        text2 = (self.indexed_string.raw_string()
+                .encode('utf-8', 'xmlcharrefreplace').decode('utf-8'))
+        text1 = re.sub(r'[<>&]', '|', text1)
+        text2 = re.sub(r'[<>&]', '|', text2)
         exp = [(self.indexed_string.word(x[0]),
                 self.indexed_string.string_position(x[0]),
                 x[1]) for x in exp]
@@ -74,9 +78,9 @@ class TextDomainMapper(explanation.DomainMapper):
             [itertools.product([x[0]], x[1], [x[2]]) for x in exp]))
         all_occurrences = [(x[0], int(x[1]), x[2]) for x in all_occurrences]
         ret = '''
-            %s.show_raw_text(%s, %d, %s, %s, %s);
+            %s.show_raw_text(%s, %d, %s, %s, %s, %s);
             ''' % (exp_object_name, json.dumps(all_occurrences), label,
-                   json.dumps(text), div_name, json.dumps(opacity))
+                   json.dumps(text1), json.dumps(text2), div_name, json.dumps(opacity))
         return ret
 
 
@@ -368,7 +372,8 @@ class LimeTextExplainer(object):
         self.char_level = char_level
 
     def explain_instance(self,
-                         text_instance,
+                         text_a,
+                         text_b,
                          classifier_fn,
                          labels=(1,),
                          top_labels=None,
@@ -384,9 +389,10 @@ class LimeTextExplainer(object):
         each of the classes in an interpretable way (see lime_base.py).
 
         Args:
-            text_instance: raw text string to be explained.
+            text_a: first string - left untouched
+            text_b: second string - instance to be explained
             classifier_fn: classifier prediction probability function, which
-                takes a list of d strings and outputs a (d, k) numpy array with
+                takes a list of d string pairs and outputs a (d, k) numpy array with
                 prediction probabilities, where k is the number of classes.
                 For ScikitClassifiers , this is classifier.predict_proba.
             labels: iterable with labels to be explained.
@@ -405,15 +411,16 @@ class LimeTextExplainer(object):
             explanations.
         """
 
-        indexed_string = (IndexedCharacters(
-            text_instance, bow=self.bow, mask_string=self.mask_string)
+        indexed_text_b = (IndexedCharacters(
+            text_b, bow=self.bow, mask_string=self.mask_string)
                           if self.char_level else
-                          IndexedString(text_instance, bow=self.bow,
+                          IndexedString(text_b, bow=self.bow,
                                         split_expression=self.split_expression,
                                         mask_string=self.mask_string))
-        domain_mapper = TextDomainMapper(indexed_string)
+        domain_mapper = TextDomainMapper(text_a, indexed_text_b)
         data, yss, distances = self.__data_labels_distances(
-            indexed_string, classifier_fn, num_samples,
+            text_a, indexed_text_b,
+            classifier_fn, num_samples,
             distance_metric=distance_metric)
         if self.class_names is None:
             self.class_names = [str(x) for x in range(yss[0].shape[0])]
@@ -435,7 +442,8 @@ class LimeTextExplainer(object):
         return ret_exp
 
     def __data_labels_distances(self,
-                                indexed_string,
+                                text_a,
+                                indexed_text_b,
                                 classifier_fn,
                                 num_samples,
                                 distance_metric='cosine'):
@@ -445,9 +453,10 @@ class LimeTextExplainer(object):
         the instance, and predicting with the classifier. Uses cosine distance
         to compute distances between original and perturbed instances.
         Args:
-            indexed_string: document (IndexedString) to be explained,
+            text_a: first raw string
+            indexed_text_b: string (IndexedString) to be explained,
             classifier_fn: classifier prediction probability function, which
-                takes a string and outputs prediction probabilities. For
+                takes a pair of strings and outputs prediction probabilities. For
                 ScikitClassifier, this is classifier.predict_proba.
             num_samples: size of the neighborhood to learn the linear model
             distance_metric: the distance metric to use for sample weighting,
@@ -457,7 +466,7 @@ class LimeTextExplainer(object):
         Returns:
             A tuple (data, labels, distances), where:
                 data: dense num_samples * K binary matrix, where K is the
-                    number of tokens in indexed_string. The first row is the
+                    number of tokens in indexed_text_b. The first row is the
                     original instance, and thus a row of ones.
                 labels: num_samples * L matrix, where L is the number of target
                     labels
@@ -470,17 +479,17 @@ class LimeTextExplainer(object):
             return sklearn.metrics.pairwise.pairwise_distances(
                 x, x[0], metric=distance_metric).ravel() * 100
 
-        doc_size = indexed_string.num_words()
+        doc_size = indexed_text_b.num_words()
         sample = self.random_state.randint(1, doc_size + 1, num_samples - 1)
         data = np.ones((num_samples, doc_size))
         data[0] = np.ones(doc_size)
         features_range = range(doc_size)
-        inverse_data = [indexed_string.raw_string()]
+        inverse_data = [(text_a, indexed_text_b.raw_string())]
         for i, size in enumerate(sample, start=1):
             inactive = self.random_state.choice(features_range, size,
                                                 replace=False)
             data[i, inactive] = 0
-            inverse_data.append(indexed_string.inverse_removing(inactive))
+            inverse_data.append((text_a, indexed_text_b.inverse_removing(inactive)))
         labels = classifier_fn(inverse_data)
         distances = distance_fn(sp.sparse.csr_matrix(data))
         return data, labels, distances

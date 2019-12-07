@@ -29,7 +29,7 @@ class Explanation {
   }
   // exp has all ocurrences of words, with start index and weight:
   // exp = [('word', 132, -0.13), ('word3', 111, 1.3)
-  show_raw_text(exp, label, raw, div, opacity=true) {
+  show_raw_text(exp, label, raw1, raw2, div, opacity=true) {
     //let colors=['#5F9EA0', this.colors(this.exp['class'])];
     let colors=['#5F9EA0', this.colors_i(label)];
     if (this.names.length == 2) {
@@ -49,7 +49,7 @@ class Explanation {
     if (!opacity) {
       max_weight = 0;
     }
-    this.display_raw_text(div, raw, word_lists, colors, max_weight, true);
+    this.display_raw_text(div, raw1, raw2, word_lists, colors, max_weight, true);
   }
   // exp is list of (feature_name, value, weight)
   show_raw_tabular(exp, label, div) {
@@ -94,14 +94,17 @@ class Explanation {
   }
   // sord_lists is an array of arrays, of length (colors). if with_positions is true,
   // word_lists is an array of [start,end] positions instead
-  display_raw_text(div, raw_text, word_lists=[], colors=[], max_weight=1, positions=false) {
+  display_raw_text(div, raw_text1, raw_text2, word_lists=[], colors=[], max_weight=1, positions=false) {
     div.classed('lime', true).classed('text_div', true);
-    div.append('h3').text('Text with highlighted words');
+    div.append('h3').text('First sentence');
+    div.append('span').style('white-space', 'pre-wrap').text(raw_text1);
+    div.append('h3').text('Second sentence with highlighted words');
+
     let highlight_tag = 'span';
-    let text_span = div.append('span').style('white-space', 'pre-wrap').text(raw_text);
+    let text_span = div.append('span').style('white-space', 'pre-wrap').text(raw_text2);
     let position_lists = word_lists;
     if (!positions) {
-      position_lists = this.wordlists_to_positions(word_lists, raw_text);
+      position_lists = this.wordlists_to_positions(word_lists, raw_text2);
     }
     let objects = []
     for (let i of range(position_lists.length)) {
@@ -111,7 +114,7 @@ class Explanation {
     let node = text_span.node().childNodes[0];
     let subtract = 0;
     for (let obj of objects) {
-      let word = raw_text.slice(obj.start, obj.end);
+      let word = raw_text2.slice(obj.start, obj.end);
       let start = obj.start - subtract;
       let end = obj.end - subtract;
       let match = document.createElement(highlight_tag);

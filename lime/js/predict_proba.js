@@ -5,7 +5,7 @@ class PredictProba {
   // svg: d3 object with the svg in question
   // class_names: array of class names
   // predict_probas: array of prediction probabilities
-  constructor(svg, class_names, predict_probas, title='Prediction probabilities') {
+  constructor(svg, class_names, true_class, predict_probas, title='Prediction probabilities') {
     let width = parseInt(svg.style('width'));
     this.names = class_names;
     this.names.push('Other');
@@ -24,16 +24,29 @@ class PredictProba {
     let x_scale = d3.scale.linear().range([0, bar_width]);
     let bar_height = 17;
     let space_between_bars = 5;
-    let bar_yshift= title === '' ? 0 : 35;
+    let bar_yshift= title === '' ? 0 : 65;
     let n_bars = Math.min(5, data.length);
     this.svg_height = n_bars * (bar_height + space_between_bars) + bar_yshift;
     svg.style('height', this.svg_height + 'px');
     let this_object = this;
+    if (true_class !== '') {
+      svg.append('text')
+        .text('True class: ')
+        .attr('font-size', '20')
+        .attr('x', 20)
+        .attr('y', 20);
+      svg.append('text')
+        .text(names[true_class])
+        .attr('font-size', '20')
+        .style('fill', this.colors(names[true_class]))
+        .attr('x', 110)
+        .attr('y', 20);
+    }
     if (title !== '') {
       svg.append('text')
         .text(title)
         .attr('x', 20)
-        .attr('y', 20);
+        .attr('y', 50);
     }
     let bar_y = i => (bar_height + space_between_bars) * i + bar_yshift;
     let bar = svg.append("g");

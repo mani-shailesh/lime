@@ -266,8 +266,9 @@ class Explanation(object):
             var pp_div = top_div.append('div')
                                 .classed('lime predict_proba', true);
             var pp_svg = pp_div.append('svg').style('width', '100%%');
-            var pp = new lime.PredictProba(pp_svg, %s, %s);
+            var pp = new lime.PredictProba(pp_svg, %s, %s, %s);
             ''' % (jsonize([str(x) for x in self.class_names]),
+                   jsonize(self.domain_mapper.true_label),
                    jsonize(list(self.predict_proba.astype(float))))
 
         predict_value_js = ''

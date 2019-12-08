@@ -20,7 +20,7 @@ from . import lime_base
 class TextDomainMapper(explanation.DomainMapper):
     """Maps feature ids to words or word-positions"""
 
-    def __init__(self, text1, indexed_string):
+    def __init__(self, text1, indexed_string, true_label):
         """Initializer.
 
         Args:
@@ -28,6 +28,7 @@ class TextDomainMapper(explanation.DomainMapper):
         """
         self.text1 = text1
         self.indexed_string = indexed_string
+        self.true_label = true_label
 
     def map_exp_ids(self, exp, positions=False):
         """Maps ids to words or word-position strings.
@@ -374,6 +375,7 @@ class LimeTextExplainer(object):
     def explain_instance(self,
                          text_a,
                          text_b,
+                         true_label,
                          classifier_fn,
                          labels=(1,),
                          top_labels=None,
@@ -391,6 +393,7 @@ class LimeTextExplainer(object):
         Args:
             text_a: first string - left untouched
             text_b: second string - instance to be explained
+            true_label: True label of the instance
             classifier_fn: classifier prediction probability function, which
                 takes a list of d string pairs and outputs a (d, k) numpy array with
                 prediction probabilities, where k is the number of classes.
@@ -417,7 +420,7 @@ class LimeTextExplainer(object):
                           IndexedString(text_b, bow=self.bow,
                                         split_expression=self.split_expression,
                                         mask_string=self.mask_string))
-        domain_mapper = TextDomainMapper(text_a, indexed_text_b)
+        domain_mapper = TextDomainMapper(text_a, indexed_text_b, true_label)
         data, yss, distances = self.__data_labels_distances(
             text_a, indexed_text_b,
             classifier_fn, num_samples,

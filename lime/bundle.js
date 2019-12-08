@@ -27209,8 +27209,8 @@ var lime =
 	  // svg: d3 object with the svg in question
 	  // class_names: array of class names
 	  // predict_probas: array of prediction probabilities
-	  function PredictProba(svg, class_names, predict_probas) {
-	    var title = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'Prediction probabilities';
+	  function PredictProba(svg, class_names, true_class, predict_probas) {
+	    var title = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 'Prediction probabilities';
 	
 	    _classCallCheck(this, PredictProba);
 	
@@ -27236,13 +27236,17 @@ var lime =
 	    var x_scale = _d3.default.scale.linear().range([0, bar_width]);
 	    var bar_height = 17;
 	    var space_between_bars = 5;
-	    var bar_yshift = title === '' ? 0 : 35;
+	    var bar_yshift = title === '' ? 0 : 65;
 	    var n_bars = Math.min(5, data.length);
 	    this.svg_height = n_bars * (bar_height + space_between_bars) + bar_yshift;
 	    svg.style('height', this.svg_height + 'px');
 	    var this_object = this;
+	    if (true_class !== '') {
+	      svg.append('text').text('True class: ').attr('font-size', '20').attr('x', 20).attr('y', 20);
+	      svg.append('text').text(names[true_class]).attr('font-size', '20').style('fill', this.colors(names[true_class])).attr('x', 110).attr('y', 20);
+	    }
 	    if (title !== '') {
-	      svg.append('text').text(title).attr('x', 20).attr('y', 20);
+	      svg.append('text').text(title).attr('x', 20).attr('y', 50);
 	    }
 	    var bar_y = function bar_y(i) {
 	      return (bar_height + space_between_bars) * i + bar_yshift;
